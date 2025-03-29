@@ -1,130 +1,1148 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Water Quality Monitoring System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <title>Water Quality Monitor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text: #0f172a;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .navbar {
+            background-color: var(--surface);
+            box-shadow: var(--shadow);
+            padding: 1rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+        }
+
+        .navbar-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-link {
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-link:hover {
+            color: var(--primary);
+        }
+
+        .nav-link.active {
+            color: var(--primary);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 5rem auto 2rem;
+            padding: 0 1rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card {
+            background-color: var(--surface);
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .timer-display {
+            text-align: center;
+            padding: 1rem;
+            background-color: var(--background);
+            border-radius: 0.5rem;
+        }
+
+        .timer-label {
+            font-size: 0.875rem;
+            color: var(--text-light);
+            margin-bottom: 0.5rem;
+        }
+
+        .timer-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .counter-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .counter-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            min-width: 3rem;
+            text-align: center;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            opacity: 0.9;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .input-field {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .readings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .readings-table th,
+        .readings-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .readings-table th {
+            font-weight: 500;
+            color: var(--text-light);
+            background-color: var(--background);
+        }
+
+        .readings-table tr:hover {
+            background-color: var(--background);
+        }
+
+        .chart-container {
+            height: 300px;
+            margin-top: 1rem;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-badge.connected {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .status-badge.disconnected {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: var(--surface);
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-lg);
+            width: 90%;
+            max-width: 500px;
+            animation: modal-appear 0.3s ease-out;
+        }
+
+        @keyframes modal-appear {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header h2 {
+            color: var(--primary);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-body .input-group {
+            margin-bottom: 1rem;
+        }
+
+        .modal-body label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .modal-body .input-field {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .modal-body .input-field:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        #start-experiment {
+            margin-right: 1rem;
+        }
+
+        #start-experiment.started {
+            background-color: var(--success);
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            .navbar-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary {
+            background-color: var(--surface-dark);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--surface-darker);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .card {
+                padding: 1rem;
+            }
+
+            .chart-container {
+                height: 250px;
+            }
+
+            .readings-table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .counter-controls {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .counter-value {
+                font-size: 1rem !important;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            .input-field {
+                width: 100%;
+                margin: 0.25rem 0;
+            }
+
+            .btn {
+                padding: 0.75rem;
+                font-size: 0.875rem;
+            }
+
+            /* Modal Responsive */
+            .modal-content {
+                width: 95%;
+                margin: 1rem;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+
+            .modal-body {
+                padding: 1rem;
+            }
+
+            .modal-header, .modal-footer {
+                padding: 1rem;
+            }
+
+            /* Navigation Responsive */
+            .navbar-container {
+                flex-direction: column;
+                padding: 0.5rem;
+            }
+
+            .nav-links {
+                flex-direction: column;
+                width: 100%;
+                gap: 0.5rem;
+                margin-top: 0.5rem;
+            }
+
+            .nav-link {
+                width: 100%;
+                text-align: center;
+                padding: 0.5rem;
+            }
+
+            /* Card Actions Responsive */
+            .card-header {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .card-actions {
+                flex-wrap: wrap;
+                justify-content: center;
+                width: 100%;
+            }
+
+            .card-actions .btn {
+                flex: 1;
+                min-width: 120px;
+            }
+
+            /* Timer Display Responsive */
+            .timer-display {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .timer-label {
+                text-align: center;
+            }
+
+            .timer-value {
+                font-size: 1.25rem;
+            }
+        }
+
+        /* Small phones */
+        @media (max-width: 480px) {
+            .container {
+                padding: 0.25rem;
+            }
+
+            .card {
+                padding: 0.75rem;
+            }
+
+            .chart-container {
+                height: 200px;
+            }
+
+            .btn {
+                padding: 0.5rem;
+                font-size: 0.75rem;
+            }
+
+            .timer-value {
+                font-size: 1rem;
+            }
+
+            .counter-value {
+                font-size: 0.875rem !important;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="app-container">
-        <div class="sidebar">
-            <h1 class="app-title">Water Quality Monitoring System</h1>
-            
-            <!-- Timer Section -->
-            <div class="timer-section">
-                <h3>Total Time</h3>
-                <div class="timer-display">
-                    <div class="timer-card">
-                        <div id="total-timer">00:00:00</div>
-                        <div class="timer-controls">
-                            <button id="total-timer-toggle" class="btn-primary btn-sm">Start</button>
-                            <button id="total-timer-reset" class="btn-secondary btn-sm">Reset</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Counter Section -->
-            <div class="counter-section">
-                <h3>Counters</h3>
-                <div class="counter-group">
-                    <div class="counter-item">
-                        <label>Cycle Number</label>
-                        <div class="counter-controls">
-                            <button id="decrement-cycle" class="btn btn-danger btn-sm">-</button>
-                            <span id="cycle-number">0</span>
-                            <button id="increment-cycle" class="btn btn-primary btn-sm">+</button>
-                        </div>
-                    </div>
-                    <div class="counter-item">
-                        <label>Sample Number</label>
-                        <div class="counter-controls">
-                            <button id="decrement-sample" class="btn btn-danger btn-sm">-</button>
-                            <span id="sample-number">1</span>
-                            <button id="increment-sample" class="btn btn-primary btn-sm">+</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Input Section -->
-            <div class="readings-section">
-                <div class="reading-group">
-                    <h3>pH Reading</h3>
-                    <div class="input-group">
-                        <input type="number" class="ph-input" step="0.01" placeholder="Enter pH reading">
-                    </div>
-                </div>
-                <div class="reading-group">
-                    <h3>TDS Reading</h3>
-                    <div class="input-group">
-                        <input type="number" class="tds-input" step="1" placeholder="Enter TDS reading">
-                    </div>
-                </div>
-                <div class="actions">
-                    <button id="save-reading" class="btn-primary">Save Readings</button>
-                    <button id="send-arduino" class="btn-secondary">Send to Arduino</button>
-                </div>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="#" class="logo">Water Quality Monitor</a>
+            <div class="nav-links">
+                <button id="start-experiment" class="btn btn-primary">Start Experiment</button>
+                <a href="#" class="nav-link active">Dashboard</a>
+                <a href="history.html" class="nav-link">History</a>
+                <span id="esp32-status" class="status-badge disconnected">Disconnected</span>
             </div>
         </div>
-        
-        <main class="main-content">
-            <!-- Data Table Section -->
-            <div class="data-table-section">
-                <div class="table-header">
-                    <h3>Reading History</h3>
-                    <div class="table-actions">
-                        <button id="export-csv" class="btn btn-outline-primary">
-                            <i class="bi bi-download"></i> Export CSV
-                        </button>
-                        <button id="clear-data" class="btn btn-outline-danger">
-                            <i class="bi bi-trash"></i> Clear Data
-                        </button>
-                    </div>
+    </nav>
+
+    <!-- Initial Readings Modal -->
+    <div id="initial-readings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Initial Readings</h2>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label for="initial-ph">Initial pH Level</label>
+                    <input type="number" id="initial-ph" class="input-field" step="0.1" min="0" max="14">
                 </div>
-                <div class="table-container">
-                    <table id="data-table" class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Time</th>
-                                <th>pH</th>
-                                <th>TDS</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                <div class="input-group">
+                    <label for="initial-tds">Initial TDS Level</label>
+                    <input type="number" id="initial-tds" class="input-field" min="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="submit-initial-readings" class="btn btn-primary">Start</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="grid">
+            <!-- Timers Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Timers</h2>
+                </div>
+                <div class="timer-display">
+                    <div class="timer-label">Total Time</div>
+                    <div id="total-timer" class="timer-value">00:00:00</div>
+                </div>
+                <div class="timer-display" style="margin-top: 1rem;">
+                    <div class="timer-label">Sample Time</div>
+                    <div id="sample-timer" class="timer-value">00:00:00</div>
                 </div>
             </div>
 
-            <!-- Charts Section -->
-            <div class="charts-grid">
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3>pH Level</h3>
-                        <button id="export-ph" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-download"></i> Export Graph
-                        </button>
-                    </div>
+            <!-- Sample Controls Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Sample Control</h2>
+                </div>
+                <div class="counter-controls">
+                    <button id="decrement-sample" class="btn btn-danger">-</button>
+                    <div class="counter-value">Sample <span id="sample-number">1</span></div>
+                    <button id="increment-sample" class="btn btn-primary">+</button>
+                </div>
+                <div class="counter-controls" style="margin-top: 1rem;">
+                    <button id="decrement-cycle" class="btn btn-danger">-</button>
+                    <div class="counter-value">Cycle <span id="cycle-number">1</span></div>
+                    <button id="increment-cycle" class="btn btn-primary">+</button>
+                </div>
+            </div>
+
+            <!-- Readings Input Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">New Reading</h2>
+                </div>
+                <div class="input-group">
+                    <input type="number" id="ph-input" class="input-field" placeholder="pH Level" step="0.1" min="0" max="14">
+                    <input type="number" id="tds-input" class="input-field" placeholder="TDS Level" min="0">
+                </div>
+                <button id="submit-readings" class="btn btn-primary" style="width: 100%;">Submit Reading</button>
+            </div>
+        </div>
+
+        <!-- Charts Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Measurements</h2>
+                <div class="card-actions">
+                    <button id="download-current-ph-chart" class="btn btn-secondary">
+                        <i class="fas fa-file-image"></i> Download pH Chart
+                    </button>
+                    <button id="download-current-tds-chart" class="btn btn-secondary">
+                        <i class="fas fa-file-image"></i> Download TDS Chart
+                    </button>
+                </div>
+            </div>
+            <div class="grid">
+                <div class="chart-container">
                     <canvas id="ph-chart"></canvas>
                 </div>
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3>TDS Level</h3>
-                        <button id="export-tds" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-download"></i> Export Graph
-                        </button>
-                    </div>
+                <div class="chart-container">
                     <canvas id="tds-chart"></canvas>
                 </div>
             </div>
-        </main>
+        </div>
+
+        <!-- Readings Table Card -->
+        <div class="card" style="margin-top: 1.5rem;">
+            <div class="card-header">
+                <h2 class="card-title">Recent Readings</h2>
+                <div class="card-actions">
+                    <button id="download-current-excel" class="btn btn-secondary">
+                        <i class="fas fa-file-excel"></i> Download Excel
+                    </button>
+                </div>
+            </div>
+            <table class="readings-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>pH</th>
+                        <th>TDS</th>
+                    </tr>
+                </thead>
+                <tbody id="readings-table-body"></tbody>
+            </table>
+        </div>
     </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="script.js"></script>
+
+    <script>
+        // ESP32 Configuration
+        const ESP32_IP = '192.168.1.100'; // Change this to your ESP32's IP address
+        const API_BASE_URL = `http://${ESP32_IP}`;
+
+        // State Management
+        const state = {
+            totalTime: 0,
+            sampleTime: 0,
+            currentSample: 1,
+            currentCycle: 1,
+            readings: [],
+            timers: {
+                total: null,
+                sample: null
+            },
+            esp32Connected: false,
+            experimentStarted: false,
+            initialReadings: null
+        };
+
+        // DOM Elements
+        const totalTimerElement = document.getElementById('total-timer');
+        const sampleTimerElement = document.getElementById('sample-timer');
+        const sampleNumberElement = document.getElementById('sample-number');
+        const cycleNumberElement = document.getElementById('cycle-number');
+        const readingsTableBody = document.getElementById('readings-table-body');
+        const esp32StatusElement = document.getElementById('esp32-status');
+
+        // Modal Elements
+        const modal = document.getElementById('initial-readings-modal');
+        const startButton = document.getElementById('start-experiment');
+        const submitInitialButton = document.getElementById('submit-initial-readings');
+
+        // Charts Configuration
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    font: {
+                        size: 16,
+                        family: "'Poppins', sans-serif",
+                        weight: 500
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            elements: {
+                line: {
+                    tension: 0.4
+                },
+                point: {
+                    radius: 4,
+                    hoverRadius: 6
+                }
+            }
+        };
+
+        // Initialize pH Chart
+        const phChart = new Chart(document.getElementById('ph-chart'), {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'pH Levels',
+                    data: [],
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    fill: true
+                }]
+            },
+            options: {
+                ...chartOptions,
+                plugins: {
+                    ...chartOptions.plugins,
+                    title: {
+                        ...chartOptions.plugins.title,
+                        text: 'pH Levels Over Time'
+                    }
+                },
+                scales: {
+                    ...chartOptions.scales,
+                    y: {
+                        ...chartOptions.scales.y,
+                        max: 14
+                    }
+                }
+            }
+        });
+
+        // Initialize TDS Chart
+        const tdsChart = new Chart(document.getElementById('tds-chart'), {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'TDS Levels',
+                    data: [],
+                    borderColor: '#22c55e',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    fill: true
+                }]
+            },
+            options: {
+                ...chartOptions,
+                plugins: {
+                    ...chartOptions.plugins,
+                    title: {
+                        ...chartOptions.plugins.title,
+                        text: 'TDS Levels Over Time'
+                    }
+                }
+            }
+        });
+
+        // Timer Functions
+        function startTimers() {
+            if (state.experimentStarted && !state.timers.total) {
+                state.timers.total = setInterval(updateTimers, 1000);
+            }
+        }
+
+        function updateTimers() {
+            state.totalTime++;
+            state.sampleTime++;
+            
+            totalTimerElement.textContent = formatTime(state.totalTime);
+            sampleTimerElement.textContent = formatTime(state.sampleTime);
+        }
+
+        function formatTime(seconds) {
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        // Counter Functions
+        document.getElementById('increment-sample').addEventListener('click', async () => {
+            if (state.readings.length > 0) {
+                // Save current readings to history
+                const history = JSON.parse(localStorage.getItem('waterQualityHistory')) || [];
+                history.push(...state.readings);
+                localStorage.setItem('waterQualityHistory', JSON.stringify(history));
+
+                // Clear current readings
+                state.readings = [];
+                readingsTableBody.innerHTML = '';
+                phChart.data.labels = [];
+                phChart.data.datasets[0].data = [];
+                tdsChart.data.labels = [];
+                tdsChart.data.datasets[0].data = [];
+                phChart.update();
+                tdsChart.update();
+
+                // Reset cycle to 1 for new sample
+                state.currentCycle = 1;
+                state.currentSample++;
+                state.cycleTime = 0;
+                state.sampleTime = 0;
+
+                // Add initial reading for new sample if exists
+                if (state.initialReadings) {
+                    const reading = {
+                        time: new Date().toISOString(),
+                        sample: state.currentSample,
+                        cycle: 'initial',
+                        ph: state.initialReadings.ph,
+                        tds: state.initialReadings.tds
+                    };
+
+                    try {
+                        if (state.esp32Connected) {
+                            await sendReadingToESP32(reading);
+                        }
+                        
+                        addReading({
+                            ...reading,
+                            time: new Date(reading.time)
+                        });
+                    } catch (error) {
+                        console.error('Error:', error);
+                        addReading({
+                            ...reading,
+                            time: new Date(reading.time)
+                        });
+                    }
+                }
+            }
+            updateCounters();
+        });
+
+        document.getElementById('decrement-sample').addEventListener('click', () => {
+            if (state.currentSample > 1) {
+                state.currentSample--;
+                updateCounters();
+            }
+        });
+
+        document.getElementById('increment-cycle').addEventListener('click', () => {
+            state.currentCycle++;
+            updateCounters();
+        });
+
+        document.getElementById('decrement-cycle').addEventListener('click', () => {
+            if (state.currentCycle > 1) {
+                state.currentCycle--;
+                updateCounters();
+            }
+        });
+
+        function updateCounters() {
+            sampleNumberElement.textContent = state.currentSample;
+            cycleNumberElement.textContent = state.currentCycle;
+        }
+
+        // ESP32 Communication Functions
+        async function checkESP32Connection() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/readings`);
+                state.esp32Connected = response.ok;
+            } catch (error) {
+                state.esp32Connected = false;
+            }
+            updateESP32Status();
+        }
+
+        function updateESP32Status() {
+            esp32StatusElement.textContent = state.esp32Connected ? 'Connected' : 'Disconnected';
+            esp32StatusElement.className = `status-badge ${state.esp32Connected ? 'connected' : 'disconnected'}`;
+        }
+
+        async function sendReadingToESP32(reading) {
+            if (!state.esp32Connected) {
+                throw new Error('ESP32 is not connected');
+            }
+
+            const response = await fetch(`${API_BASE_URL}/reading`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(reading)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+        }
+
+        // Readings Functions
+        document.getElementById('submit-readings').addEventListener('click', async () => {
+            const phInput = document.getElementById('ph-input');
+            const tdsInput = document.getElementById('tds-input');
+
+            if (!phInput.value || !tdsInput.value) {
+                alert('Please enter both pH and TDS readings');
+                return;
+            }
+
+            const reading = {
+                time: new Date().toISOString(),
+                sample: state.currentSample,
+                cycle: state.currentCycle,
+                ph: parseFloat(phInput.value),
+                tds: parseFloat(tdsInput.value)
+            };
+
+            try {
+                // Try to send to ESP32 if connected
+                if (state.esp32Connected) {
+                    await sendReadingToESP32(reading);
+                }
+                
+                addReading({
+                    ...reading,
+                    time: new Date(reading.time)
+                });
+                
+                const history = JSON.parse(localStorage.getItem('waterQualityHistory')) || [];
+                history.push(reading);
+                localStorage.setItem('waterQualityHistory', JSON.stringify(history));
+
+                state.currentCycle++;
+                updateCounters();
+
+                phInput.value = '';
+                tdsInput.value = '';
+            } catch (error) {
+                console.error('Error:', error);
+                // Continue with local operation even if ESP32 communication fails
+                addReading({
+                    ...reading,
+                    time: new Date(reading.time)
+                });
+                
+                const history = JSON.parse(localStorage.getItem('waterQualityHistory')) || [];
+                history.push(reading);
+                localStorage.setItem('waterQualityHistory', JSON.stringify(history));
+
+                state.currentCycle++;
+                updateCounters();
+
+                phInput.value = '';
+                tdsInput.value = '';
+            }
+        });
+
+        // Submit Initial Readings
+        submitInitialButton.addEventListener('click', async () => {
+            const initialPh = parseFloat(document.getElementById('initial-ph').value);
+            const initialTds = parseFloat(document.getElementById('initial-tds').value);
+
+            if (!initialPh || !initialTds) {
+                alert('Please enter both pH and TDS readings');
+                return;
+            }
+
+            state.initialReadings = {
+                ph: initialPh,
+                tds: initialTds
+            };
+
+            // Add initial reading
+            const reading = {
+                time: new Date().toISOString(),
+                sample: state.currentSample,
+                cycle: 'initial',
+                ph: initialPh,
+                tds: initialTds
+            };
+
+            try {
+                // Try to send to ESP32 if connected
+                if (state.esp32Connected) {
+                    await sendReadingToESP32(reading);
+                }
+                
+                // Continue with local operation regardless of ESP32 connection
+                addReading({
+                    ...reading,
+                    time: new Date(reading.time)
+                });
+
+                // Start experiment
+                state.experimentStarted = true;
+                startButton.textContent = 'Experiment Running';
+                startButton.classList.add('started');
+                startTimers();
+                modal.classList.remove('show');
+            } catch (error) {
+                console.error('Error:', error);
+                // Continue with local operation even if ESP32 communication fails
+                addReading({
+                    ...reading,
+                    time: new Date(reading.time)
+                });
+
+                // Start experiment
+                state.experimentStarted = true;
+                startButton.textContent = 'Experiment Running';
+                startButton.classList.add('started');
+                startTimers();
+                modal.classList.remove('show');
+            }
+        });
+
+        function addReading(reading) {
+            const row = readingsTableBody.insertRow(); // Changed from insertRow(0) to insertRow()
+            row.insertCell(0).textContent = state.sampleTime > 0 ? formatTime(state.sampleTime) : '00:00:00';
+            
+            // Format status based on whether it's an initial reading or not
+            if (reading.cycle === 'initial') {
+                row.insertCell(1).textContent = `Before Filtration at Sample ${reading.sample}`;
+            } else {
+                row.insertCell(1).textContent = `Sample ${reading.sample} Cycle ${reading.cycle}`;
+            }
+            
+            row.insertCell(2).textContent = reading.ph;
+            row.insertCell(3).textContent = reading.tds;
+
+            state.readings.push(reading);
+            updateCharts(reading);
+        }
+
+        function updateCharts(reading) {
+            const label = reading.time.toLocaleTimeString();
+
+            // Update pH Chart
+            phChart.data.labels.push(label);
+            phChart.data.datasets[0].data.push(reading.ph);
+            if (phChart.data.labels.length > 10) {
+                phChart.data.labels.shift();
+                phChart.data.datasets[0].data.shift();
+            }
+            phChart.update();
+
+            // Update TDS Chart
+            tdsChart.data.labels.push(label);
+            tdsChart.data.datasets[0].data.push(reading.tds);
+            if (tdsChart.data.labels.length > 10) {
+                tdsChart.data.labels.shift();
+                tdsChart.data.datasets[0].data.shift();
+            }
+            tdsChart.update();
+        }
+
+        // Download functions
+        function downloadCurrentExcel() {
+            const ws = XLSX.utils.json_to_sheet(state.readings);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Current_Readings");
+            XLSX.writeFile(wb, `current_readings_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
+        function downloadChart(chartId, title) {
+            const chart = document.getElementById(chartId);
+            const link = document.createElement('a');
+            link.download = `${title}_${new Date().toISOString().split('T')[0]}.jpg`;
+            link.href = chart.toDataURL('image/jpeg', 1.0);
+            link.click();
+        }
+
+        // Add event listeners for downloads
+        document.getElementById('download-current-excel').addEventListener('click', downloadCurrentExcel);
+        document.getElementById('download-current-ph-chart').addEventListener('click', () => downloadChart('ph-chart', 'current_ph_levels'));
+        document.getElementById('download-current-tds-chart').addEventListener('click', () => downloadChart('tds-chart', 'current_tds_levels'));
+
+        // Start Experiment
+        startButton.addEventListener('click', () => {
+            if (!state.experimentStarted) {
+                modal.classList.add('show');
+                document.getElementById('initial-ph').focus();
+            }
+        });
+
+        // Close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('show');
+            }
+        });
+
+        // Handle Enter key in inputs
+        document.getElementById('initial-ph').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('initial-tds').focus();
+            }
+        });
+
+        document.getElementById('initial-tds').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitInitialButton.click();
+            }
+        });
+
+        // Initialization
+        async function initialize() {
+            await checkESP32Connection();
+            setInterval(checkESP32Connection, 5000); // Check connection every 5 seconds
+        }
+
+        initialize();
+    </script>
 </body>
-</html> 
+</html>

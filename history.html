@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Quality Monitor - History</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text: #0f172a;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .navbar {
+            background-color: var(--surface);
+            box-shadow: var(--shadow);
+            padding: 1rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+        }
+
+        .navbar-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-link {
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-link:hover {
+            color: var(--primary);
+        }
+
+        .nav-link.active {
+            color: var(--primary);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-badge.connected {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .status-badge.disconnected {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 5rem auto 2rem;
+            padding: 0 1rem;
+        }
+
+        .card {
+            background-color: var(--surface);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 1rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .filter-group {
+            margin-bottom: 1rem;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-light);
+        }
+
+        .filter-group select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 0.25rem;
+        }
+
+        .readings-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .readings-table th, .readings-table td {
+            padding: 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .readings-table th {
+            background-color: var(--surface);
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .chart-container {
+            background-color: var(--surface);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: var(--shadow-sm);
+            height: 300px;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary {
+            background-color: var(--surface-dark);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--surface-darker);
+        }
+
+        .btn-danger {
+            background-color: #dc2626;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #b91c1c;
+        }
+
+        .fas {
+            font-size: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .navbar-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            .card {
+                padding: 1rem;
+            }
+
+            .chart-container {
+                height: 250px;
+            }
+
+            .readings-table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Navigation Responsive */
+            .navbar-container {
+                flex-direction: column;
+                padding: 0.5rem;
+            }
+
+            .nav-links {
+                flex-direction: column;
+                width: 100%;
+                gap: 0.5rem;
+                margin-top: 0.5rem;
+            }
+
+            .nav-link {
+                width: 100%;
+                text-align: center;
+                padding: 0.5rem;
+            }
+
+            /* Card Actions Responsive */
+            .card-header {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .card-actions {
+                flex-wrap: wrap;
+                justify-content: center;
+                width: 100%;
+            }
+
+            .card-actions .btn {
+                flex: 1;
+                min-width: 120px;
+            }
+
+            .filter-group {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .filter-group select {
+                width: 100%;
+            }
+        }
+
+        /* Small phones */
+        @media (max-width: 480px) {
+            .container {
+                padding: 0.25rem;
+            }
+
+            .card {
+                padding: 0.75rem;
+            }
+
+            .chart-container {
+                height: 200px;
+            }
+
+            .btn {
+                padding: 0.5rem;
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="#" class="logo">Water Quality Monitor</a>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">Dashboard</a>
+                <a href="#" class="nav-link active">History</a>
+                <span id="esp32-status" class="status-badge disconnected">Disconnected</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Readings History</h2>
+                <div class="card-actions">
+                    <button id="download-excel" class="btn btn-secondary">
+                        <i class="fas fa-file-excel"></i> Download Excel
+                    </button>
+                    <button id="reset-history" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Reset History
+                    </button>
+                </div>
+            </div>
+            <div class="history-section">
+                <div class="filter-group">
+                    <label for="sampleFilter">Sample:</label>
+                    <select id="sampleFilter">
+                        <option value="all">All Samples</option>
+                    </select>
+                </div>
+
+                <table class="readings-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Status</th>
+                            <th>pH</th>
+                            <th>TDS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Historical Trends</h2>
+                <div class="card-actions">
+                    <button id="download-ph-chart" class="btn btn-secondary">
+                        <i class="fas fa-file-image"></i> Download pH Chart
+                    </button>
+                    <button id="download-tds-chart" class="btn btn-secondary">
+                        <i class="fas fa-file-image"></i> Download TDS Chart
+                    </button>
+                </div>
+            </div>
+            <div class="charts-container">
+                <div class="chart-container">
+                    <canvas id="history-ph-chart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="history-tds-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ESP32 Configuration
+        const ESP32_IP = '192.168.1.100';
+        const API_BASE_URL = `http://${ESP32_IP}`;
+
+        // Load and display history
+        function loadHistory() {
+            const history = JSON.parse(localStorage.getItem('waterQualityHistory')) || [];
+            const tableBody = document.getElementById('history-table-body');
+            const sampleFilter = document.getElementById('sampleFilter');
+            const samples = new Set();
+
+            // Clear existing content
+            tableBody.innerHTML = '';
+            sampleFilter.innerHTML = '<option value="all">All Samples</option>';
+
+            // Update samples filter
+            history.forEach(reading => {
+                samples.add(reading.sample);
+            });
+
+            Array.from(samples).sort((a, b) => a - b).forEach(sample => {
+                sampleFilter.add(new Option(`Sample ${sample}`, sample));
+            });
+
+            // Display readings
+            function displayReadings(filteredHistory) {
+                tableBody.innerHTML = '';
+                filteredHistory.forEach(reading => {
+                    const row = tableBody.insertRow();
+                    row.insertCell(0).textContent = reading.time; // Keep using saved time for history
+                    
+                    // Format status based on whether it's an initial reading or not
+                    if (reading.cycle === 'initial') {
+                        row.insertCell(1).textContent = `Before Filtration at Sample ${reading.sample}`;
+                    } else {
+                        row.insertCell(1).textContent = `Sample ${reading.sample} Cycle ${reading.cycle}`;
+                    }
+                    
+                    row.insertCell(2).textContent = reading.ph;
+                    row.insertCell(3).textContent = reading.tds;
+                });
+
+                updateCharts(filteredHistory);
+            }
+
+            // Initial display
+            displayReadings(history);
+
+            // Filter change handler
+            sampleFilter.addEventListener('change', () => {
+                const selectedSample = sampleFilter.value;
+                const filteredHistory = selectedSample === 'all' 
+                    ? history 
+                    : history.filter(reading => reading.sample === parseInt(selectedSample));
+                displayReadings(filteredHistory);
+            });
+        }
+
+        // Initialize charts
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    font: {
+                        size: 16,
+                        family: "'Poppins', sans-serif",
+                        weight: 500
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        };
+
+        const phChart = new Chart(document.getElementById('history-ph-chart'), {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'pH Levels',
+                    data: [],
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    fill: true
+                }]
+            },
+            options: {
+                ...chartOptions,
+                plugins: {
+                    ...chartOptions.plugins,
+                    title: {
+                        ...chartOptions.plugins.title,
+                        text: 'pH Levels History'
+                    }
+                },
+                scales: {
+                    ...chartOptions.scales,
+                    y: {
+                        ...chartOptions.scales.y,
+                        max: 14
+                    }
+                }
+            }
+        });
+
+        const tdsChart = new Chart(document.getElementById('history-tds-chart'), {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'TDS Levels',
+                    data: [],
+                    borderColor: '#22c55e',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    fill: true
+                }]
+            },
+            options: {
+                ...chartOptions,
+                plugins: {
+                    ...chartOptions.plugins,
+                    title: {
+                        ...chartOptions.plugins.title,
+                        text: 'TDS Levels History'
+                    }
+                }
+            }
+        });
+
+        function updateCharts(readings) {
+            const labels = readings.map(r => new Date(r.time).toLocaleTimeString());
+            const phData = readings.map(r => r.ph);
+            const tdsData = readings.map(r => r.tds);
+
+            phChart.data.labels = labels;
+            phChart.data.datasets[0].data = phData;
+            phChart.update();
+
+            tdsChart.data.labels = labels;
+            tdsChart.data.datasets[0].data = tdsData;
+            tdsChart.update();
+        }
+
+        // Download functions
+        function downloadExcel() {
+            const history = JSON.parse(localStorage.getItem('waterQualityHistory')) || [];
+            const ws = XLSX.utils.json_to_sheet(history);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Readings");
+            XLSX.writeFile(wb, `water_quality_readings_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
+        function downloadChart(chartId, title) {
+            const chart = document.getElementById(chartId);
+            const link = document.createElement('a');
+            link.download = `${title}_${new Date().toISOString().split('T')[0]}.jpg`;
+            link.href = chart.toDataURL('image/jpeg', 1.0);
+            link.click();
+        }
+
+        function resetHistory() {
+            if (confirm('Are you sure you want to reset all history? This cannot be undone.')) {
+                localStorage.setItem('waterQualityHistory', '[]');
+                loadHistory();
+            }
+        }
+
+        // ESP32 Connection check
+        async function checkESP32Connection() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/readings`);
+                const connected = response.ok;
+                const statusElement = document.getElementById('esp32-status');
+                statusElement.textContent = connected ? 'Connected' : 'Disconnected';
+                statusElement.className = `status-badge ${connected ? 'connected' : 'disconnected'}`;
+            } catch (error) {
+                const statusElement = document.getElementById('esp32-status');
+                statusElement.textContent = 'Disconnected';
+                statusElement.className = 'status-badge disconnected';
+            }
+        }
+
+        // Add event listeners
+        document.getElementById('download-excel').addEventListener('click', downloadExcel);
+        document.getElementById('download-ph-chart').addEventListener('click', () => downloadChart('history-ph-chart', 'ph_levels'));
+        document.getElementById('download-tds-chart').addEventListener('click', () => downloadChart('history-tds-chart', 'tds_levels'));
+        document.getElementById('reset-history').addEventListener('click', resetHistory);
+
+        // Initialize
+        loadHistory();
+        checkESP32Connection();
+        setInterval(checkESP32Connection, 5000);
+    </script>
+</body>
+</html>
