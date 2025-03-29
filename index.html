@@ -702,38 +702,39 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    position: 'top',
-                },
                 title: {
                     display: true,
                     font: {
                         size: 16,
-                        family: "'Poppins', sans-serif",
-                        weight: 500
+                        weight: 'bold'
                     }
+                },
+                legend: {
+                    display: false
                 }
             },
             scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Time',
+                        font: {
+                            weight: 'bold'
+                        }
+                    },
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                },
                 y: {
                     beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.1)'
+                    title: {
+                        display: true,
+                        font: {
+                            weight: 'bold'
+                        }
                     }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    }
-                }
-            },
-            elements: {
-                line: {
-                    tension: 0.4
-                },
-                point: {
-                    radius: 4,
-                    hoverRadius: 6
                 }
             }
         };
@@ -748,7 +749,8 @@
                     data: [],
                     borderColor: '#2563eb',
                     backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                    fill: true
+                    fill: true,
+                    tension: 0.4
                 }]
             },
             options: {
@@ -757,13 +759,17 @@
                     ...chartOptions.plugins,
                     title: {
                         ...chartOptions.plugins.title,
-                        text: 'pH Levels Over Time'
+                        text: 'pH Levels'
                     }
                 },
                 scales: {
                     ...chartOptions.scales,
                     y: {
                         ...chartOptions.scales.y,
+                        title: {
+                            ...chartOptions.scales.y.title,
+                            text: 'pH'
+                        },
                         max: 14
                     }
                 }
@@ -780,7 +786,8 @@
                     data: [],
                     borderColor: '#22c55e',
                     backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                    fill: true
+                    fill: true,
+                    tension: 0.4
                 }]
             },
             options: {
@@ -789,32 +796,61 @@
                     ...chartOptions.plugins,
                     title: {
                         ...chartOptions.plugins.title,
-                        text: 'TDS Levels Over Time'
+                        text: 'TDS Levels'
+                    }
+                },
+                scales: {
+                    ...chartOptions.scales,
+                    y: {
+                        ...chartOptions.scales.y,
+                        title: {
+                            ...chartOptions.scales.y.title,
+                            text: 'TDS'
+                        }
                     }
                 }
             }
         });
 
-        // Timer Functions
-        function startTimers() {
-            if (state.experimentStarted && !state.timers.total) {
-                state.timers.total = setInterval(updateTimers, 1000);
-            }
-        }
-
-        function updateTimers() {
-            state.totalTime++;
-            state.sampleTime++;
-            
-            totalTimerElement.textContent = formatTime(state.totalTime);
-            sampleTimerElement.textContent = formatTime(state.sampleTime);
-        }
-
-        function formatTime(seconds) {
+        // Format time for display (HH:MM:SS)
+        function formatTimeDisplay(seconds) {
             const hrs = Math.floor(seconds / 3600);
             const mins = Math.floor((seconds % 3600) / 60);
             const secs = seconds % 60;
             return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        // Format time for graphs (seconds only)
+        function formatTimeGraph(seconds) {
+            return seconds.toString();
+        }
+
+        // Timer Functions
+        function startTimers() {
+            if (!state.timers.total) {
+                state.timers.total = setInterval(() => {
+                    state.totalTime++;
+                    state.sampleTime++;
+                    
+                    totalTimerElement.textContent = formatTimeDisplay(state.totalTime);
+                    sampleTimerElement.textContent = formatTimeDisplay(state.sampleTime);
+                }, 1000);
+            }
+        }
+
+        function stopTimers() {
+            if (state.timers.total) {
+                clearInterval(state.timers.total);
+                state.timers.total = null;
+            }
+        }
+
+        function resetTimers() {
+            stopTimers();
+            state.totalTime = 0;
+            state.sampleTime = 0;
+            totalTimerElement.textContent = formatTimeDisplay(0);
+            sampleTimerElement.textContent = formatTimeDisplay(0);
         }
 
         // Counter Functions
@@ -931,62 +967,31 @@
         }
 
         // Readings Functions
-        document.getElementById('submit-readings').addEventListener('click', async () => {
-            const phInput = document.getElementById('ph-input');
-            const tdsInput = document.getElementById('tds-input');
+        function addReading(reading) {
+            // Use current timer value for the reading
+            reading.time = state.totalTime;
 
-            if (!phInput.value || !tdsInput.value) {
-                alert('Please enter both pH and TDS readings');
-                return;
-            }
+            // Add to readings array
+            state.readings.push(reading);
 
-            const reading = {
-                time: new Date().toISOString(),
-                sample: state.currentSample,
-                cycle: state.currentCycle,
-                ph: parseFloat(phInput.value),
-                tds: parseFloat(tdsInput.value)
-            };
+            // Add to table
+            const row = readingsTableBody.insertRow(0);
+            row.innerHTML = `
+                <td>${formatTimeDisplay(state.totalTime)}</td>
+                <td>${reading.cycle === 'initial' ? 'Initial Reading' : `Sample ${reading.sample}, Cycle ${reading.cycle}`}</td>
+                <td>${reading.ph}</td>
+                <td>${reading.tds}</td>
+            `;
 
-            try {
-                // Try to send to ESP32 if connected
-                if (state.esp32Connected) {
-                    await sendReadingToESP32(reading);
-                }
-                
-                addReading({
-                    ...reading,
-                    time: new Date(reading.time)
-                });
-                
-                const history = JSON.parse(localStorage.getItem('waterQualityHistory')) || [];
-                history.push(reading);
-                localStorage.setItem('waterQualityHistory', JSON.stringify(history));
+            // Update charts with current timer value (in seconds)
+            phChart.data.labels.push(formatTimeGraph(state.totalTime));
+            phChart.data.datasets[0].data.push(reading.ph);
+            phChart.update();
 
-                state.currentCycle++;
-                updateCounters();
-
-                phInput.value = '';
-                tdsInput.value = '';
-            } catch (error) {
-                console.error('Error:', error);
-                // Continue with local operation even if ESP32 communication fails
-                addReading({
-                    ...reading,
-                    time: new Date(reading.time)
-                });
-                
-                const history = JSON.parse(localStorage.getItem('waterQualityHistory')) || [];
-                history.push(reading);
-                localStorage.setItem('waterQualityHistory', JSON.stringify(history));
-
-                state.currentCycle++;
-                updateCounters();
-
-                phInput.value = '';
-                tdsInput.value = '';
-            }
-        });
+            tdsChart.data.labels.push(formatTimeGraph(state.totalTime));
+            tdsChart.data.datasets[0].data.push(reading.tds);
+            tdsChart.update();
+        }
 
         // Submit Initial Readings
         submitInitialButton.addEventListener('click', async () => {
@@ -1003,9 +1008,9 @@
                 tds: initialTds
             };
 
-            // Add initial reading
+            // Add initial reading with current timer value
             const reading = {
-                time: new Date().toISOString(),
+                time: state.totalTime,
                 sample: state.currentSample,
                 cycle: 'initial',
                 ph: initialPh,
@@ -1019,73 +1024,80 @@
                 }
                 
                 // Continue with local operation regardless of ESP32 connection
-                addReading({
-                    ...reading,
-                    time: new Date(reading.time)
-                });
+                addReading(reading);
+                modal.classList.remove('show');
 
                 // Start experiment
                 state.experimentStarted = true;
                 startButton.textContent = 'Experiment Running';
                 startButton.classList.add('started');
                 startTimers();
-                modal.classList.remove('show');
             } catch (error) {
                 console.error('Error:', error);
                 // Continue with local operation even if ESP32 communication fails
-                addReading({
-                    ...reading,
-                    time: new Date(reading.time)
-                });
+                addReading(reading);
+                modal.classList.remove('show');
 
                 // Start experiment
                 state.experimentStarted = true;
                 startButton.textContent = 'Experiment Running';
                 startButton.classList.add('started');
                 startTimers();
-                modal.classList.remove('show');
             }
         });
 
-        function addReading(reading) {
-            const row = readingsTableBody.insertRow(); // Changed from insertRow(0) to insertRow()
-            row.insertCell(0).textContent = state.sampleTime > 0 ? formatTime(state.sampleTime) : '00:00:00';
+        // Submit Regular Readings
+        document.getElementById('submit-readings').addEventListener('click', async () => {
+            if (!state.experimentStarted) {
+                alert('Please start the experiment first');
+                return;
+            }
+
+            const phInput = document.getElementById('ph-input');
+            const tdsInput = document.getElementById('tds-input');
             
-            // Format status based on whether it's an initial reading or not
-            if (reading.cycle === 'initial') {
-                row.insertCell(1).textContent = `Before Filtration at Sample ${reading.sample}`;
-            } else {
-                row.insertCell(1).textContent = `Sample ${reading.sample} Cycle ${reading.cycle}`;
+            const ph = parseFloat(phInput.value);
+            const tds = parseFloat(tdsInput.value);
+
+            if (isNaN(ph) || isNaN(tds)) {
+                alert('Please enter valid pH and TDS readings');
+                return;
             }
-            
-            row.insertCell(2).textContent = reading.ph;
-            row.insertCell(3).textContent = reading.tds;
 
-            state.readings.push(reading);
-            updateCharts(reading);
-        }
-
-        function updateCharts(reading) {
-            const label = reading.time.toLocaleTimeString();
-
-            // Update pH Chart
-            phChart.data.labels.push(label);
-            phChart.data.datasets[0].data.push(reading.ph);
-            if (phChart.data.labels.length > 10) {
-                phChart.data.labels.shift();
-                phChart.data.datasets[0].data.shift();
+            if (ph < 0 || ph > 14) {
+                alert('pH must be between 0 and 14');
+                return;
             }
-            phChart.update();
 
-            // Update TDS Chart
-            tdsChart.data.labels.push(label);
-            tdsChart.data.datasets[0].data.push(reading.tds);
-            if (tdsChart.data.labels.length > 10) {
-                tdsChart.data.labels.shift();
-                tdsChart.data.datasets[0].data.shift();
+            if (tds < 0) {
+                alert('TDS cannot be negative');
+                return;
             }
-            tdsChart.update();
-        }
+
+            const reading = {
+                time: state.totalTime,
+                sample: state.currentSample,
+                cycle: state.currentCycle,
+                ph: ph,
+                tds: tds
+            };
+
+            try {
+                if (state.esp32Connected) {
+                    await sendReadingToESP32(reading);
+                }
+                
+                addReading(reading);
+
+                // Clear inputs
+                phInput.value = '';
+                tdsInput.value = '';
+                phInput.focus();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error submitting reading. Please try again.');
+            }
+        });
 
         // Download functions
         function downloadCurrentExcel() {
